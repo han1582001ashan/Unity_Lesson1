@@ -5,59 +5,177 @@ using System.Diagnostics;
 using Unity.VisualScripting;
 using UnityEditor.Timeline;
 using UnityEngine;
+using UnityEngine.TextCore.LowLevel;
 using UnityEngine.UIElements;
 
 public class Car1A : MonoBehaviour
 {
-  // Start is called before the first frame update
-  public Vector3 AnglesRotate = new Vector3(0, 90, 0);
-  public float rotationSpeed = 50f;
-  [SerializeField] List<GameObject> wayLimitPoints;
-  float speed = 2;
-  int index = 0;
-  void Start()
-  {
+  #region SetupField
+    [SerializeField]
+    private float defaultSpeed = 10;
+    [SerializeField]
+    private int startWaypointIndex;
+    [SerializeField]
+    private float rotateDuration = 4f;
+    [SerializeField]
+    private float adjustRotationTime = 0.5f;
+    [SerializeField]
+    private Transform targetTransformDebug;
+    [SerializeField]
+    private WPManager wPManager;
+    #endregion
 
-  }
+    int curTargetIndex;
+    Vector3 targetPos;
+    Vector3 directionToTarget;
+    [SerializeField]
+    private float curInterpolationVal;
 
-  // Update is called once per frame
-  void Update()
-  {
-    Vector3 destination = wayLimitPoints[index].transform.position;
-    float distance = Vector3.Distance(transform.position, destination);
+    [SerializeField]
+    private float speed = 10;
+    float elapsedTime;
+    float yCar;
 
-    Vector3 newpos = Vector3.MoveTowards(transform.position, destination, speed * Time.deltaTime);
-   
-    transform.position = newpos;
-    Vector3 relativePos= wayLimitPoints[index].transform.position - transform.position; 
+    const float DELTA_ANGLE = 2;
+    Quaternion targetQuarternion;
+    Quaternion startQuarternion;
 
-
-    Quaternion targetRotation = Quaternion.LookRotation(relativePos, Vector3.up);
-    transform.rotation= Quaternion.Lerp(transform.rotation, targetRotation, 10* Time.deltaTime);
     
 
-    if (distance <= 0.2)
+    private void Awake()
     {
-      if (index < wayLimitPoints.Count - 1)
-      {
-        index++;
-// transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, rotationSpeed * Time.deltaTime);
-      }
-      else
-      {
-        index = 0;
-
-      }
+        Application.runInBackground = true;
+        yCar = transform.position.y;
+        //Application.targetFrameRate = 30;
+    }
+    private void Start()
+    {
+        curTargetIndex = startWaypointIndex;
+        speed = defaultSpeed;
+        SetTarget();
+        transform.position = targetPos;
+        
+        OnReachTarget();
+        transform.forward = directionToTarget;
+    }
+    private void Update()
+    {
+        CalculateDirectionToTarget();
+        if (IsReachTarget())
+        {
+            OnReachTarget();
+        }
+        LerpDirectionToTarget();
+        MoveForward();
+        AddPosToPathpoint();
     }
 
+    public bool IsReachTarget()
+    {
+        return Vector3.Dot(transform.forward, directionToTarget) <= 0; 
+        //Vector2 directionToTargetV2 = new Vector2(directionToTarget.x, directionToTarget.z);
+        //Vector2 curDirection = new Vector2(transform.forward.x, transform.forward.z);
 
+        //return Vector2.Dot(directionToTargetV2, curDirection) <= 0;
+    }
 
+    public void ResetLerpWhenReachTarget()
+    {
+        elapsedTime = 0;
+    }
 
+    public void LerpDirectionToTarget()
+    {
+        float angle = Vector3.Angle(directionToTarget, transform.forward);
+        if (angle < DELTA_ANGLE)
+        {
+            transform.forward = directionToTarget;
+            return;
+        }
+        elapsedTime += Time.deltaTime;
+        curInterpolationVal = elapsedTime / rotateDuration;
+        if (curInterpolationVal >= 1)
+        {
+            curInterpolationVal = 1;
+        }
+        targetQuarternion = Quaternion.LookRotation(directionToTarget);
+        transform.rotation = Quaternion.Slerp(startQuarternion, targetQuarternion, curInterpolationVal);
+    }
 
+ 
+    public void CalculateDirectionToTarget()
+    {
+        directionToTarget = targetPos - transform.position;
+        //directionToTarget.y = 0;
+        
+    }
+    public void CalculateStartTargetQuarternion()
+    {
+        startQuarternion = Quaternion.LookRotation(transform.forward);
+        //targetQuarternion = Quaternion.LookRotation(directionToTarget);
+    }
+    public void OnReachTarget()
+    {
+        if (curTargetIndex == startWaypointIndex)
+        {
+            OnCompleteARound();
+        }
+        IncreaseIndex();
+        SetTarget();
+        CalculateDirectionToTarget();
+        CalculateStartTargetQuarternion();
+        SetSpeed();
+        ResetLerpWhenReachTarget();
+    }
 
-  }
+    public void AddPosToPathpoint()
+    {
+        wPManager.AddPathPoints(transform.position);
+    }
+    public void MoveForward()
+    {
+        transform.position += speed * Time.deltaTime * transform.forward;
+    }
 
+    public int GetNextIndex()
+    {
+        int result = curTargetIndex + 1;
+        if (result >= wPManager.targets.Length)
+        {
+            result = 0;
+        }
+        return result;
+    }
+    public void IncreaseIndex()
+    {
+        curTargetIndex = GetNextIndex();
+        if (curTargetIndex >= wPManager.targets.Length)
+        {
+            curTargetIndex = 0;
+        }
+       
+    }
 
+    void OnCompleteARound()
+    {
+        wPManager.ClearPathPoints();
+    }
+    public void SetSpeed()
+    {
+        float distance = directionToTarget.magnitude;
+        float targetSpeedToRotate = distance / (rotateDuration + adjustRotationTime);
+        if (targetSpeedToRotate > defaultSpeed)
+        {
+            targetSpeedToRotate = defaultSpeed;
+        }
 
+        speed = targetSpeedToRotate;
+    }
+    public void SetTarget()
+    {
+        targetPos = wPManager.targets[curTargetIndex].position;
+     
+        targetTransformDebug.position = targetPos;
+    }
 }
 

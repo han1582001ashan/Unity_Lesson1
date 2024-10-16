@@ -12,7 +12,7 @@ public class WPManager : MonoBehaviour
             return;
         }
         for (int i=0; i<pathPoints.Count -1 ; i++){
-            Gizmos.DrawLine(pathPoints[1], pathPoints[i+1]);
+            Gizmos.DrawLine(pathPoints[i], pathPoints[i+1]);
         }
     }
 

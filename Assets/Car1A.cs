@@ -10,7 +10,9 @@ using UnityEngine.UIElements;
 
 public class Car1A : MonoBehaviour
 {
-  #region SetupField
+    #region SetupField
+    [SerializeField]
+    private float HP = 100;
     [SerializeField]
     private float defaultSpeed = 10;
     [SerializeField]
@@ -40,7 +42,7 @@ public class Car1A : MonoBehaviour
     Quaternion targetQuarternion;
     Quaternion startQuarternion;
 
-    
+
 
     private void Awake()
     {
@@ -54,7 +56,7 @@ public class Car1A : MonoBehaviour
         speed = defaultSpeed;
         SetTarget();
         transform.position = targetPos;
-        
+
         OnReachTarget();
         transform.forward = directionToTarget;
     }
@@ -72,7 +74,7 @@ public class Car1A : MonoBehaviour
 
     public bool IsReachTarget()
     {
-        return Vector3.Dot(transform.forward, directionToTarget) <= 0; 
+        return Vector3.Dot(transform.forward, directionToTarget) <= 0;
         //Vector2 directionToTargetV2 = new Vector2(directionToTarget.x, directionToTarget.z);
         //Vector2 curDirection = new Vector2(transform.forward.x, transform.forward.z);
 
@@ -102,12 +104,12 @@ public class Car1A : MonoBehaviour
         transform.rotation = Quaternion.Slerp(startQuarternion, targetQuarternion, curInterpolationVal);
     }
 
- 
+
     public void CalculateDirectionToTarget()
     {
         directionToTarget = targetPos - transform.position;
         //directionToTarget.y = 0;
-        
+
     }
     public void CalculateStartTargetQuarternion()
     {
@@ -153,7 +155,7 @@ public class Car1A : MonoBehaviour
         {
             curTargetIndex = 0;
         }
-       
+
     }
 
     void OnCompleteARound()
@@ -174,8 +176,11 @@ public class Car1A : MonoBehaviour
     public void SetTarget()
     {
         targetPos = wPManager.targets[curTargetIndex].position;
-     
+
         targetTransformDebug.position = targetPos;
+    }
+    public void OnCollisionEnter(Collision collision){
+        HP = HP-10;
     }
 }
 

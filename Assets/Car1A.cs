@@ -6,13 +6,15 @@ using Unity.VisualScripting;
 using UnityEditor.Timeline;
 using UnityEngine;
 using UnityEngine.TextCore.LowLevel;
-using UnityEngine.UIElements;
+using UnityEngine.UI;
 
 public class Car1A : MonoBehaviour
 {
     #region SetupField
     [SerializeField]
     private float HP = 100;
+    [SerializeField]
+    private float MP = 100;
     [SerializeField]
     private float defaultSpeed = 10;
     [SerializeField]
@@ -41,9 +43,10 @@ public class Car1A : MonoBehaviour
     const float DELTA_ANGLE = 2;
     Quaternion targetQuarternion;
     Quaternion startQuarternion;
-
-
-
+    [SerializeField]
+    private Slider HealthBar;
+    [SerializeField]
+    private Slider EnergyBar;
     private void Awake()
     {
         Application.runInBackground = true;
@@ -63,13 +66,17 @@ public class Car1A : MonoBehaviour
     private void Update()
     {
         CalculateDirectionToTarget();
-        if (IsReachTarget())
-        {
-            OnReachTarget();
-        }
-        LerpDirectionToTarget();
-        MoveForward();
-        AddPosToPathpoint();
+            if (IsReachTarget())
+            {
+                OnReachTarget();
+            }
+
+            LerpDirectionToTarget();
+            MoveForward();
+            AddPosToPathpoint();
+            updateMP();
+
+
     }
 
     public bool IsReachTarget()
@@ -103,7 +110,17 @@ public class Car1A : MonoBehaviour
         targetQuarternion = Quaternion.LookRotation(directionToTarget);
         transform.rotation = Quaternion.Slerp(startQuarternion, targetQuarternion, curInterpolationVal);
     }
+    private void updateMP()
+    {
+        if (MP > 0)
+        {
 
+            MP = MP - 0.01f;
+        }
+
+        EnergyBar.value = MP;
+
+    }
 
     public void CalculateDirectionToTarget()
     {
@@ -126,7 +143,8 @@ public class Car1A : MonoBehaviour
         SetTarget();
         CalculateDirectionToTarget();
         CalculateStartTargetQuarternion();
-        SetSpeed();
+
+       
         ResetLerpWhenReachTarget();
     }
 
@@ -166,12 +184,16 @@ public class Car1A : MonoBehaviour
     {
         float distance = directionToTarget.magnitude;
         float targetSpeedToRotate = distance / (rotateDuration + adjustRotationTime);
+
+
         if (targetSpeedToRotate > defaultSpeed)
         {
             targetSpeedToRotate = defaultSpeed;
         }
-
         speed = targetSpeedToRotate;
+
+
+
     }
     public void SetTarget()
     {
@@ -179,8 +201,12 @@ public class Car1A : MonoBehaviour
 
         targetTransformDebug.position = targetPos;
     }
-    public void OnCollisionEnter(Collision collision){
-        HP = HP-10;
+    public void OnCollisionEnter(Collision collision)
+    {
+        HP = HP - 10;
+        HealthBar.value = HP;
     }
+
+
 }
 
